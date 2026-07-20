@@ -148,11 +148,84 @@ recipe intends. Pure energy matches (rows 4-5) still surface but rank below any 
 
 ## Experiments You Tried
 
-Use this section to document the experiments you ran. For example:
+### Stress test — six profiles
 
-- What happened when you changed the weight on genre from 2.0 to 0.5
-- What happened when you added tempo or valence to the score
-- How did your system behave for different types of users
+Ran `python -m src.main`, which scores three realistic profiles and three adversarial
+edge cases. Top 5 for each:
+
+```text
+### Profile: High-Energy Pop
+prefs: {'genre': 'pop', 'mood': 'happy', 'energy': 0.9}
+------------------------------------------------------------
+1. Sunrise City - Neon Echo  [score: 4.38]  genre+mood+energy
+2. Gym Hero - Max Pulse  [score: 3.46]  genre+energy
+3. Rooftop Lights - Indigo Parade  [score: 2.29]  mood+energy
+4. Storm Runner - Voltline  [score: 1.48]  energy only
+5. Concrete Verses - Blockprint  [score: 1.42]  energy only
+
+### Profile: Chill Lofi
+prefs: {'genre': 'lofi', 'mood': 'chill', 'energy': 0.35}
+------------------------------------------------------------
+1. Library Rain - Paper Lanterns  [score: 4.50]  genre+mood+energy
+2. Midnight Coding - LoRoom  [score: 4.39]  genre+mood+energy
+3. Focus Flow - LoRoom  [score: 3.42]  genre+energy
+4. Spacewalk Thoughts - Orbit Bloom  [score: 2.40]  mood+energy
+5. Coffee Shop Stories - Slow Stereo  [score: 1.47]  energy only
+
+### Profile: Deep Intense Rock
+prefs: {'genre': 'rock', 'mood': 'intense', 'energy': 0.9}
+------------------------------------------------------------
+1. Storm Runner - Voltline  [score: 4.48]  genre+mood+energy
+2. Gym Hero - Max Pulse  [score: 2.46]  mood+energy
+3. Iron Verdict - Blackspire  [score: 2.38]  mood+energy
+4. Concrete Verses - Blockprint  [score: 1.42]  energy only
+5. Warehouse Pulse - Kilohertz  [score: 1.41]  energy only
+
+### Profile: Conflicting (loud but sad)  [adversarial]
+prefs: {'genre': 'metal', 'mood': 'sad', 'energy': 0.95}
+------------------------------------------------------------
+1. Iron Verdict - Blackspire  [score: 3.46]  genre+energy (mood 'sad' ignored!)
+2. Letters Unsent - Grey Harbor  [score: 1.57]  mood+energy
+3. Warehouse Pulse - Kilohertz  [score: 1.48]  energy only
+4. Gym Hero - Max Pulse  [score: 1.47]  energy only
+5. Storm Runner - Voltline  [score: 1.44]  energy only
+
+### Profile: Genre not in catalog (reggae)  [adversarial]
+prefs: {'genre': 'reggae', 'mood': 'chill', 'energy': 0.5}
+------------------------------------------------------------
+1. Midnight Coding - LoRoom  [score: 2.38]  mood+energy (no genre possible)
+2. Library Rain - Paper Lanterns  [score: 2.27]  mood+energy
+3. Spacewalk Thoughts - Orbit Bloom  [score: 2.17]  mood+energy
+4. Dust Road Home - Cody Wren  [score: 1.47]  energy only
+5. Cloud Ferry - Halcyon Kite  [score: 1.47]  energy only
+
+### Profile: Empty preferences  [adversarial]
+prefs: {}
+------------------------------------------------------------
+1-5. all score 0.00 -> returns CSV order (no tie-break)
+```
+
+**Findings:** genre match dominates conflicting signals (metal beats "sad"); missing genre
+degrades gracefully to mood+energy; empty prefs exposes a missing tie-break.
+
+### Weight experiment — double energy, halve genre
+
+Changed `W_ENERGY` 1.5 → 3.0 and `W_GENRE` 2.0 → 1.0, re-ran High-Energy Pop:
+
+```text
+EXPERIMENT: W_ENERGY 1.5->3.0, W_GENRE 2.0->1.0
+Profile: High-Energy Pop {'genre': 'pop', 'mood': 'happy', 'energy': 0.9}
+------------------------------------------------------------
+1. Sunrise City - Neon Echo  [score: 4.76]  genre(+1.0)+mood+energy(+2.76)
+2. Gym Hero - Max Pulse  [score: 3.91]  genre+energy(+2.91)
+3. Rooftop Lights - Indigo Parade  [score: 3.58]  mood+energy(+2.58)
+4. Storm Runner - Voltline  [score: 2.97]  energy only(+2.97)  <-- rock, now competitive
+5. Concrete Verses - Blockprint  [score: 2.85]  energy only
+```
+
+**Result:** more *diverse*, not just different. Storm Runner (rock) climbs because a strong
+energy match now beats a genre match — better for a user who genuinely prioritizes energy over
+genre loyalty. Trade-off lever between relevance-to-genre and cross-genre discovery.
 
 ---
 
